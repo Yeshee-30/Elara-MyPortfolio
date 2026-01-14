@@ -212,14 +212,14 @@ st.markdown("""
 <div class='card'>
 <b>GitHub:</b> 
 <a href="https://github.com/yeshee-30" target="_blank" style="color:#c084fc; text-decoration:none;">
-[https://github.com/yeshee-30](https://github.com/yeshee-30)
+github.com/yeshee-30
 </a>
 <br><br>
 
 
 <b>LinkedIn:</b> 
 <a href="https://www.linkedin.com/in/yeshee-agarwala-abba96280/" target="_blank" style="color:#c084fc; text-decoration:none;">
-[https://www.linkedin.com/in/yeshee-agarwala-abba96280/](https://www.linkedin.com/in/yeshee-agarwala-abba96280/)
+linkedin.com/in/yeshee-agarwala
 </a>
 <br><br>
 
@@ -230,3 +230,4 @@ st.markdown("""
 </a>
 </div>
 """, unsafe_allow_html=True)
+
