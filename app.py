@@ -4,19 +4,28 @@ from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.chains.conversation.retrieval import ConversationalRetrievalChain
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
+
+
 load_dotenv()
+
 
 # Silence LangChain junk
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
+
 st.set_page_config(page_title="ELARA — Yeshee Agarwal", layout="wide")
+
 
 # ----------------- LOAD SYSTEM PROMPT -----------------
 with open("data/systemprompt.txt", "r", encoding="utf-8") as f:
     SYSTEM_PROMPT = f.read()
+
 
 # ----------------- PURPLE THEME -----------------
 st.markdown("""
@@ -62,14 +71,16 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
+
 # ---------------- HERO ----------------
 st.markdown("""
 <div class="hero">
     <h1>ELARA</h1>
-    <p>Yeshee Agarwal’s Digital Twin</p>
+    <p>Yeshee Agarwal's Digital Twin</p>
     <p>Ask anything about her AI, ML, projects, and experience.</p>
 </div>
 """, unsafe_allow_html=True)
+
 
 # ---------------- LOAD DATA ----------------
 @st.cache_resource
@@ -82,7 +93,9 @@ def load_vectorstore():
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return FAISS.from_documents(docs, embeddings)
 
+
 vectorstore = load_vectorstore()
+
 
 # ---------------- LLM ----------------
 llm = ChatGroq(
@@ -91,46 +104,105 @@ llm = ChatGroq(
     temperature=0.4
 )
 
-qa = ConversationalRetrievalChain.from_llm(
-    llm,
-    retriever=vectorstore.as_retriever()
+
+# Modern conversational retrieval chain setup
+contextualize_q_system_prompt = (
+    "Given a chat history and the latest user question "
+    "which is {input}, "
+    "rephrase the latest user question to be a standalone question."
 )
+
+contextualize_q_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", contextualize_q_system_prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+    ]
+)
+
+retriever = vectorstore.as_retriever()
+
+history_aware_retriever = create_history_aware_retriever(
+    llm, retriever, contextualize_q_prompt
+)
+
+system_prompt = (
+    SYSTEM_PROMPT + 
+    "\n\nUse the following pieces of retrieved context to answer "
+    "the question. If you don't know the answer, just say that you don't know. "
+    "Use three sentences maximum and keep the answer concise."
+    "\n\n"
+    "{context}"
+)
+
+qa_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+    ]
+)
+
+question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+
+rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+
 
 # ---------------- CHAT ----------------
 st.markdown("<div class='glass'>", unsafe_allow_html=True)
 st.markdown("## 💬 Talk to ELARA")
 
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
+
 if "elara_input" not in st.session_state:
     st.session_state.elara_input = ""
+
 
 user_input = st.text_input("Ask ELARA about Yeshee…", key="elara_input")
 send = st.button("Send ✨")
 
+
 if send and user_input.strip():
     st.session_state.messages.append({"role":"user","content":user_input})
 
+
+    # Convert session messages to LangChain format
+    chat_history = []
+    for msg in st.session_state.messages[:-1]:  # Exclude current user input
+        if msg["role"] == "user":
+            chat_history.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "assistant":
+            chat_history.append(AIMessage(content=msg["content"]))
+
+
     full_prompt = SYSTEM_PROMPT + "\n\nUser question: " + user_input
 
-    response = qa({
-        "question": full_prompt,
-        "chat_history": [(m["content"], "") for m in st.session_state.messages]
+
+    response = rag_chain.invoke({
+        "input": full_prompt,
+        "chat_history": chat_history
     })["answer"]
+
 
     st.session_state.messages.append({"role":"assistant","content":response})
     st.rerun()
 
+
 st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ---------------- PROJECTS ----------------
 st.markdown("## 🚀 Projects")
 cols = st.columns(3)
+
 
 with cols[0]:
     st.markdown("<div class='card'><h3>🚗 Pothole Detection</h3>CNN-based assistive driving system with 94–95% accuracy.</div>", unsafe_allow_html=True)
@@ -139,7 +211,9 @@ with cols[1]:
 with cols[2]:
     st.markdown("<div class='card'><h3>🧠 Answer Sheet AI</h3>Agentic AI that evaluates descriptive answers and reduces teacher workload.</div>", unsafe_allow_html=True)
 
+
 st.markdown("<div class='card'><h3>👁 Cataract Detection</h3>Medical CNN system for eye disease detection.</div>", unsafe_allow_html=True)
+
 
 # ---------------- EXPERIENCE ----------------
 st.markdown("## 💼 Experience")
@@ -177,6 +251,7 @@ agarwalyeshee364@gmail.com
 </a>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
