@@ -1,13 +1,12 @@
 import streamlit as st
 import os
-from langchain.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_community.document_loaders import TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-
 load_dotenv()
 
 # Silence LangChain junk
@@ -178,5 +177,6 @@ agarwalyeshee364@gmail.com
 </a>
 </div>
 """, unsafe_allow_html=True)
+
 
 
