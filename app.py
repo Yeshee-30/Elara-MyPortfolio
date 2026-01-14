@@ -1,45 +1,87 @@
 import streamlit as st
 import os
 from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 
+
 load_dotenv()
+
+
+# Silence LangChain junk
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
+
 
 st.set_page_config(page_title="ELARA — Yeshee Agarwal", layout="wide")
 
-# ---------- LOAD SYSTEM PROMPT ----------
+
+# ----------------- LOAD SYSTEM PROMPT -----------------
 with open("data/systemprompt.txt", "r", encoding="utf-8") as f:
     SYSTEM_PROMPT = f.read()
 
-# ---------- THEME ----------
+
+# ----------------- PURPLE THEME -----------------
 st.markdown("""
 <style>
-body { background: radial-gradient(circle at top, #1a0633, #02010a); color:white; }
-.hero { text-align:center; padding:60px 20px; }
-.hero h1 { font-size:64px; color:#c084fc; text-shadow:0 0 30px #a855f7; }
-.hero p { color:#c4b5fd; font-size:18px; }
-.glass { background:rgba(15,12,30,.85); border-radius:16px; padding:25px; box-shadow:0 0 40px rgba(168,85,247,.2); }
-.card { background:rgba(20,15,40,.9); border-radius:14px; padding:20px; margin:10px; box-shadow:0 0 25px rgba(168,85,247,.2); }
-.card h3 { color:#c084fc; }
-.footer { text-align:center; color:#a78bfa; margin-top:50px; }
+body {
+    background: radial-gradient(circle at top, #1a0633, #02010a);
+    color: white;
+}
+.hero {
+    text-align: center;
+    padding: 60px 20px 40px 20px;
+}
+.hero h1 {
+    font-size: 64px;
+    color: #c084fc;
+    text-shadow: 0 0 30px #a855f7;
+}
+.hero p {
+    font-size: 18px;
+    color: #c4b5fd;
+}
+.glass {
+    background: rgba(15, 12, 30, 0.8);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 0 40px rgba(168,85,247,0.2);
+}
+.card {
+    background: rgba(20,15,40,0.9);
+    border-radius: 14px;
+    padding: 20px;
+    margin: 10px;
+    box-shadow: 0 0 25px rgba(168,85,247,0.2);
+}
+.card h3 {
+    color: #c084fc;
+}
+.footer {
+    text-align:center;
+    color:#a78bfa;
+    margin-top:50px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- HERO ----------
+
+# ---------------- HERO ----------------
 st.markdown("""
 <div class="hero">
-<h1>ELARA</h1>
-<p>Yeshee Agarwal’s Digital Twin</p>
-<p>Ask anything about her AI, ML, projects, and experience.</p>
+    <h1>ELARA</h1>
+    <p>Yeshee Agarwal's Digital Twin</p>
+    <p>Ask anything about her AI, ML, projects, and experience.</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ---------- LOAD DOCUMENTS ----------
+
+# ---------------- LOAD DATA ----------------
 @st.cache_resource
 def load_vectorstore():
     docs = []
@@ -50,93 +92,158 @@ def load_vectorstore():
     embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return FAISS.from_documents(docs, embeddings)
 
-vectorstore = load_vectorstore()
-retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
-# ---------- LLM ----------
+vectorstore = load_vectorstore()
+
+
+# ---------------- LLM ----------------
 llm = ChatGroq(
     api_key=os.getenv("GROQ_API_KEY"),
     model_name="llama-3.1-8b-instant",
     temperature=0.4
 )
 
-# ---------- CHAT ----------
+
+# Custom RAG chain without ConversationalRetrievalChain
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+@st.cache_resource
+def get_rag_chain():
+    retriever = vectorstore.as_retriever()
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_PROMPT),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{question}"),
+        ("placeholder", "{context}")
+    ])
+    
+    def chain_fn(inputs):
+        question = inputs["question"]
+        chat_history = inputs["chat_history"]
+        
+        # Retrieve relevant docs
+        docs = retriever.get_relevant_documents(question)
+        context = format_docs(docs)
+        
+        # Format messages
+        messages = []
+        for human_msg, ai_msg in chat_history:
+            messages.append(("human", human_msg))
+            if ai_msg:
+                messages.append(("ai", ai_msg))
+        messages.append(("human", question))
+        
+        # Create full prompt with context
+        full_prompt = prompt.format(
+            chat_history=messages,
+            question=question,
+            context=context
+        )
+        
+        return llm.invoke(full_prompt).content
+    
+    return chain_fn
+
+
+rag_chain = get_rag_chain()
+
+
+# ---------------- CHAT ----------------
 st.markdown("<div class='glass'>", unsafe_allow_html=True)
 st.markdown("## 💬 Talk to ELARA")
 
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
+
 if "elara_input" not in st.session_state:
     st.session_state.elara_input = ""
+
 
 user_input = st.text_input("Ask ELARA about Yeshee…", key="elara_input")
 send = st.button("Send ✨")
 
+
 if send and user_input.strip():
-    st.session_state.messages.append({"role": "user", "content": user_input})
+    st.session_state.messages.append({"role":"user","content":user_input})
 
-    # retrieve relevant docs
-    docs = retriever.get_relevant_documents(user_input)
-    context = "\n\n".join([d.page_content for d in docs])
+    full_prompt = SYSTEM_PROMPT + "\n\nUser question: " + user_input
 
-    # build chat history
-    history = ""
-    for m in st.session_state.messages[:-1]:
-        if m["role"] == "user":
-            history += f"User: {m['content']}\n"
-        else:
-            history += f"ELARA: {m['content']}\n"
+    # Use custom RAG chain
+    response = rag_chain({
+        "question": full_prompt,
+        "chat_history": [(m["content"], "") for m in st.session_state.messages if m["role"] == "user"]
+    })
 
-    # final prompt
-    prompt = f"""
-{SYSTEM_PROMPT}
-
-Conversation so far:
-{history}
-
-Context:
-{context}
-
-User question:
-{user_input}
-
-Answer as ELARA:
-"""
-
-    answer = llm.invoke(prompt).content
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    st.session_state.messages.append({"role":"assistant","content":response})
     st.rerun()
+
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------- PROJECTS ----------
+
+# ---------------- PROJECTS ----------------
 st.markdown("## 🚀 Projects")
 cols = st.columns(3)
-cols[0].markdown("<div class='card'><h3>🚗 Pothole Detection</h3>CNN based assistive driving system (95%).</div>", unsafe_allow_html=True)
-cols[1].markdown("<div class='card'><h3>📄 DocuSnap</h3>Enterprise GenAI document intelligence.</div>", unsafe_allow_html=True)
-cols[2].markdown("<div class='card'><h3>🧠 Answer Sheet AI</h3>Agentic AI for evaluation.</div>", unsafe_allow_html=True)
-st.markdown("<div class='card'><h3>👁 Cataract Detection</h3>Medical CNN detection system.</div>", unsafe_allow_html=True)
 
-# ---------- EXPERIENCE ----------
+
+with cols[0]:
+    st.markdown("<div class='card'><h3>🚗 Pothole Detection</h3>CNN-based assistive driving system with 94–95% accuracy.</div>", unsafe_allow_html=True)
+with cols[1]:
+    st.markdown("<div class='card'><h3>📄 DocuSnap</h3>Enterprise GenAI for extracting structured data from documents and images.</div>", unsafe_allow_html=True)
+with cols[2]:
+    st.markdown("<div class='card'><h3>🧠 Answer Sheet AI</h3>Agentic AI that evaluates descriptive answers and reduces teacher workload.</div>", unsafe_allow_html=True)
+
+
+st.markdown("<div class='card'><h3>👁 Cataract Detection</h3>Medical CNN system for eye disease detection.</div>", unsafe_allow_html=True)
+
+
+# ---------------- EXPERIENCE ----------------
 st.markdown("## 💼 Experience")
 st.markdown("""
-<div class='card'><h3>Silicon Interfaces</h3>Built ANN models for chip fault simulation with 90%+ accuracy.</div>
-<div class='card'><h3>L&T Technology Services</h3>Built GenAI, RAG, DocuSnap and enterprise AI systems showcased to Nordic leadership.</div>
+<div class='card'><h3>Silicon Interfaces</h3>Built and trained a feed-forward deep learning model for predicting stuck-at faults in semiconductor circuits using fault-injected test vectors.  
+Worked extensively with neural network architectures, activation functions (ReLU, Sigmoid), and optimizers such as RMSProp and Adam to stabilize and improve model performance.  
+Performed hyperparameter tuning on learning rate, epochs, and loss functions to achieve high generalization accuracy.  
+The final model achieved over 90% accuracy, significantly improving the reliability and efficiency of chip fault simulation.</div>
+<div class='card'><h3>L&T Technology Services</h3>Designed and implemented multiple enterprise-grade Generative AI and Agentic AI solutions for automating data extraction, document understanding, and decision-making workflows.  
+Built a Smart AI system capable of processing emails, PDFs, scanned documents, handwritten labels, and images, converting unstructured data into structured, machine-readable outputs using LLMs, RAG pipelines, and FastAPI.  
+Developed a foundational GenAI architecture that became the base layer for multiple internal solutions, including DocuSnap and automated document intelligence pipelines.  
+The system was showcased to the Nordic Region leadership and adopted as the foundation for an internal L&T product, positioning it as an enterprise-scale AI capability within the organization.</div>
 """, unsafe_allow_html=True)
 
-# ---------- CONTACT ----------
+
+# ---------------- CONTACT ----------------
 st.markdown("## 📬 Contact")
+
+
 st.markdown("""
 <div class='card'>
-<a href="https://github.com/yeshee-30" target="_blank">GitHub</a><br>
-<a href="https://www.linkedin.com/in/yeshee-agarwala-abba96280/" target="_blank">LinkedIn</a><br>
-<a href="mailto:agarwalyeshee364@gmail.com">Email</a>
+<b>GitHub:</b> 
+<a href="https://github.com/yeshee-30" target="_blank" style="color:#c084fc; text-decoration:none;">
+[https://github.com/yeshee-30](https://github.com/yeshee-30)
+</a>
+<br><br>
+
+
+<b>LinkedIn:</b> 
+<a href="https://www.linkedin.com/in/yeshee-agarwala-abba96280/" target="_blank" style="color:#c084fc; text-decoration:none;">
+[https://www.linkedin.com/in/yeshee-agarwala-abba96280/](https://www.linkedin.com/in/yeshee-agarwala-abba96280/)
+</a>
+<br><br>
+
+
+<b>Email:</b> 
+<a href="mailto:agarwalyeshee364@gmail.com" style="color:#c084fc;">
+[agarwalyeshee364@gmail.com](mailto:agarwalyeshee364@gmail.com)
+</a>
 </div>
 """, unsafe_allow_html=True)
-
-st.markdown("<div class='footer'>Built with 💜 by Yeshee Agarwal</div>", unsafe_allow_html=True)
