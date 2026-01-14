@@ -1,0 +1,23 @@
+DocuSnap – GenAI Document Intelligence Platform
+DocuSnap is a Generative AI system built using a foundational model and large language models to extract structured information from unstructured data. It processes customer emails, PDFs, scanned documents, handwritten labels, invoices, and even PCB board images. The system converts raw data into structured templates that can be used by business teams. It was built during my internship at L&T Technology Services and is being used by the team internally.
+
+Automated Answer Sheet Evaluation (Agentic AI)
+This project is built on top of an agentic AI architecture. The system reads descriptive answer sheets, analyzes the content using NLP and large language models, and assigns marks based on relevance and correctness. It reduces the workload of teachers who normally evaluate hundreds of answer sheets manually.
+
+Fault Simulation Model for Chip Design
+Developed during my internship at Silicon Interfaces. This was a deep learning project using a feed-forward artificial neural network to detect stuck-at faults in digital circuits. The model was trained using Python, with extensive hyperparameter tuning, optimizer selection, and activation function testing. The final model achieved approximately 91 percent accuracy.
+
+Pothole Detection for Assistive Driving
+This was a computer vision project developed as part of an assistive driving system for vehicles. I helped a senior engineer build this system using CNNs and pre-trained embedded vision models. The goal was to detect potholes on the road in real time from camera input. The final system achieved around 94–95 percent accuracy and was designed to help vehicles adjust driving behavior and improve safety.
+
+Cataract Detection System
+A CNN-based computer vision system that classifies eye images to detect cataracts. The project involved image preprocessing, training deep learning models, and evaluating accuracy.
+
+Wine Quality Prediction
+A machine learning model that predicts wine quality based on chemical properties using regression and classification algorithms.
+
+House Price Prediction
+A regression-based machine learning model that predicts housing prices using features such as location, size, and other numerical attributes.
+
+Personal AI Portfolio Chatbot
+I am building a chatbot trained on my own resume, projects, and experience using retrieval-augmented generation (RAG). This chatbot acts as my AI portfolio and can answer questions about my background, skills, and projects.

@@ -1,0 +1,9 @@
+My name is Yeshee Agarwal. I am a fourth-year B.Tech student currently in my final semester, specializing in Artificial Intelligence and Machine Learning. I am deeply passionate about mathematics, algorithms, and understanding how AI systems work at a fundamental level.
+
+I am especially interested in the mathematical and algorithmic foundations of machine learning and deep learning. I enjoy working with concepts such as optimization, gradient descent, activation functions, loss functions, neural network architectures, and transformer-based models. My goal is not only to use AI tools but to understand how and why they work, and to eventually contribute to core AI research and model development.
+
+I am motivated by real-world impact. I want to work on AI systems that help people directly, especially women, the elderly, uneducated populations, and people with disabilities. I believe technology should reduce friction in everyday life and make critical services more accessible.
+
+I have experience in both traditional machine learning and modern Generative AI. I have built neural networks from scratch using Python and deep learning frameworks, and I have also built large-scale GenAI systems using large language models, retrieval-augmented generation, and agentic AI architectures.
+
+I enjoy solving complex problems and turning them into practical systems. Whether it is building a fault detection model for chip design, a document intelligence system for enterprises, or an assistive driving vision model, I like connecting theory with real-world use cases.

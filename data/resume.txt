@@ -1,0 +1,77 @@
+YESHEE AGARWAL
+Phone: +91 8730878903
+Email: agarwalyeshee364@gmail.com
+
+PROFESSIONAL SUMMARY
+Final-year B.Tech student specializing in Artificial Intelligence and Data Science with strong hands-on experience in Machine Learning, Deep Learning, and Generative AI. Experienced in building neural-network models, GenAI pipelines, and agentic AI systems for real-world applications. Skilled in designing end-to-end AI solutions including data extraction, document intelligence, and automated decision systems, with a strong interest in mathematical foundations and core AI research.
+
+SKILLS
+
+Programming Languages:
+Python, Java, R, SQL (MySQL)
+
+Frameworks and Libraries:
+TensorFlow, Scikit-learn, LangChain, LangGraph, FastAPI, Streamlit, Pandas
+
+AI and Machine Learning:
+Machine Learning, Deep Learning, Artificial Neural Networks (ANN), Convolutional Neural Networks (CNN), Generative AI, Agentic AI, Large Language Models (LLMs), Natural Language Processing (NLP), Computer Vision, Retrieval Augmented Generation (RAG)
+
+Data and Analytics:
+Data Science, Data Analysis, Data Visualization, Statistical Analysis
+
+Tools and Platforms:
+AWS, Power BI, Tableau, LangSmith, Google Colab
+
+
+EXPERIENCE
+
+Silicon Interfaces – Machine Learning Intern (2023)
+Built a feed-forward neural network model to predict stuck-at faults in semiconductor circuits using fault-injected test vectors.
+Trained and optimized deep learning models using ReLU and Sigmoid activation functions with RMSProp and Adam optimizers.
+Performed extensive hyperparameter tuning including learning rate, epochs, and loss functions.
+Achieved over 90 percent prediction accuracy, improving fault simulation reliability and efficiency.
+
+L&T Technology Services – Generative AI Intern (2024)
+Designed and implemented multiple Generative AI and Agentic AI solutions for enterprise use cases involving data extraction, document understanding, and workflow automation.
+Developed a smart AI-based document and image data extraction system capable of processing emails, PDFs, handwritten labels, and images and converting them into structured, machine-readable outputs.
+Built GenAI pipelines using LLMs, LangChain, and FastAPI for scalable deployment.
+The solution was showcased to the Nordic Region Head and adopted as the foundation for an internal L&T product, becoming the base architecture for enterprise-scale deployment.
+
+
+PROJECTS
+
+Descriptive Answer Sheet Evaluator (Agentic AI and Multimodal LLMs)
+Built an autonomous AI system to evaluate handwritten and digital descriptive answer sheets including text, diagrams, and tables with automated grading, database updates, and email-based result delivery.
+
+Cataract Detection System (CNN-based Deep Learning)
+Developed a convolutional neural network to detect cataract from eye images, achieving 94 percent accuracy on the test dataset using TensorFlow and advanced image preprocessing techniques.
+
+AI-Powered Personal Portfolio Chatbot
+Built a personalized chatbot trained on resume and project data using LLMs and Retrieval Augmented Generation, allowing users to ask questions and receive accurate, context-aware responses about skills, experience, and work.
+
+
+EDUCATION
+
+D Y Patil University, Pune, India
+Bachelor of Technology in Artificial Intelligence and Data Science
+2022 to 2026
+CGPA: 9.3
+
+
+CERTIFICATIONS
+
+Specialization in Machine Learning – Stanford University in association with DeepLearning.AI
+Foundations of R Software – NPTEL
+Python Coding, Machine Learning, and Data Structures and Algorithms – Silicon Institute of Technology
+
+
+ACTIVITIES
+
+Vice Chair – IEEE Student Chapter
+Class Representative
+Member – Student Council and Training and Placement Cell
+
+
+ACHIEVEMENTS
+
+Best Student Award – Department of Artificial Intelligence and Data Science, D Y Patil University

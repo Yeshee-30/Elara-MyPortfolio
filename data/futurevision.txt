@@ -1,0 +1,9 @@
+My long-term goal is to work in core Artificial Intelligence and Machine Learning research and development. I want to focus on understanding and improving the mathematical foundations of AI models, including optimization, learning dynamics, and model architectures.
+
+I am currently working on two major future projects.
+
+The first is a voice-based coding assistant for people with disabilities. This system will allow users to write, debug, and execute code using only voice commands, making programming more accessible to people with motor or visual impairments.
+
+The second project is an AI system designed to help uneducated and elderly people navigate government websites. This AI bot will understand user intent in natural language and automatically perform tasks such as filling forms, applying for schemes, and retrieving information by interacting with government portals on their behalf.
+
+These projects align with my personal mission to use AI for social good and to build systems that make technology more inclusive and accessible.
