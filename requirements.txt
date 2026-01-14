@@ -1,9 +1,9 @@
 streamlit
-langchain
-langchain-community
-langchain-core
-langchain-groq
-langchain-text-splitters
+langchain==0.3.19
+langchain-core==0.3.83
+langchain-community==0.3.31
+langchain-text-splitters==0.3.11
+langchain-groq==0.3.8
 faiss-cpu
 sentence-transformers
 huggingface-hub
