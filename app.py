@@ -1,13 +1,14 @@
 import streamlit as st
 import os
 from langchain_community.document_loaders import TextLoader
-from langchain_community.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
 
@@ -104,51 +105,47 @@ llm = ChatGroq(
 )
 
 
-# Custom RAG chain without ConversationalRetrievalChain
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
+# Modern conversational retrieval chain setup
+contextualize_q_system_prompt = (
+    "Given a chat history and the latest user question "
+    "which is {input}, "
+    "rephrase the latest user question to be a standalone question."
+)
 
-
-@st.cache_resource
-def get_rag_chain():
-    retriever = vectorstore.as_retriever()
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", SYSTEM_PROMPT),
+contextualize_q_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", contextualize_q_system_prompt),
         MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{question}"),
-        ("placeholder", "{context}")
-    ])
-    
-    def chain_fn(inputs):
-        question = inputs["question"]
-        chat_history = inputs["chat_history"]
-        
-        # Retrieve relevant docs
-        docs = retriever.get_relevant_documents(question)
-        context = format_docs(docs)
-        
-        # Format messages
-        messages = []
-        for human_msg, ai_msg in chat_history:
-            messages.append(("human", human_msg))
-            if ai_msg:
-                messages.append(("ai", ai_msg))
-        messages.append(("human", question))
-        
-        # Create full prompt with context
-        full_prompt = prompt.format(
-            chat_history=messages,
-            question=question,
-            context=context
-        )
-        
-        return llm.invoke(full_prompt).content
-    
-    return chain_fn
+        ("human", "{input}"),
+    ]
+)
 
+retriever = vectorstore.as_retriever()
 
-rag_chain = get_rag_chain()
+history_aware_retriever = create_history_aware_retriever(
+    llm, retriever, contextualize_q_prompt
+)
+
+system_prompt = (
+    SYSTEM_PROMPT + 
+    "\n\nUse the following pieces of retrieved context to answer "
+    "the question. If you don't know the answer, just say that you don't know. "
+    "Use three sentences maximum and keep the answer concise."
+    "\n\n"
+    "{context}"
+)
+
+qa_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}"),
+    ]
+)
+
+question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+
+rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
 
 
 # ---------------- CHAT ----------------
@@ -176,13 +173,24 @@ send = st.button("Send ✨")
 if send and user_input.strip():
     st.session_state.messages.append({"role":"user","content":user_input})
 
+
+    # Convert session messages to LangChain format
+    chat_history = []
+    for msg in st.session_state.messages[:-1]:  # Exclude current user input
+        if msg["role"] == "user":
+            chat_history.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "assistant":
+            chat_history.append(AIMessage(content=msg["content"]))
+
+
     full_prompt = SYSTEM_PROMPT + "\n\nUser question: " + user_input
 
-    # Use custom RAG chain
-    response = rag_chain({
-        "question": full_prompt,
-        "chat_history": [(m["content"], "") for m in st.session_state.messages if m["role"] == "user"]
-    })
+
+    response = rag_chain.invoke({
+        "input": full_prompt,
+        "chat_history": chat_history
+    })["answer"]
+
 
     st.session_state.messages.append({"role":"assistant","content":response})
     st.rerun()
@@ -229,7 +237,7 @@ st.markdown("""
 <div class='card'>
 <b>GitHub:</b> 
 <a href="https://github.com/yeshee-30" target="_blank" style="color:#c084fc; text-decoration:none;">
-[https://github.com/yeshee-30](https://github.com/yeshee-30)
+[https://github.com/yeshee-30]
 </a>
 <br><br>
 
