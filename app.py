@@ -5,9 +5,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.output_parsers import StrOutputParser
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
@@ -105,49 +104,6 @@ llm = ChatGroq(
 )
 
 
-# Modern conversational retrieval chain setup
-contextualize_q_system_prompt = (
-    "Given a chat history and the latest user question "
-    "which is {input}, "
-    "rephrase the latest user question to be a standalone question."
-)
-
-contextualize_q_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", contextualize_q_system_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-    ]
-)
-
-retriever = vectorstore.as_retriever()
-
-history_aware_retriever = create_history_aware_retriever(
-    llm, retriever, contextualize_q_prompt
-)
-
-system_prompt = (
-    SYSTEM_PROMPT + 
-    "\n\nUse the following pieces of retrieved context to answer "
-    "the question. If you don't know the answer, just say that you don't know. "
-    "Use three sentences maximum and keep the answer concise."
-    "\n\n"
-    "{context}"
-)
-
-qa_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", system_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-    ]
-)
-
-question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
-
-rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
-
-
 # ---------------- CHAT ----------------
 st.markdown("<div class='glass'>", unsafe_allow_html=True)
 st.markdown("## 💬 Talk to ELARA")
@@ -174,24 +130,43 @@ if send and user_input.strip():
     st.session_state.messages.append({"role":"user","content":user_input})
 
 
-    # Convert session messages to LangChain format
+    # Manual conversational retrieval - NO CHAINS
+    full_prompt = SYSTEM_PROMPT + "\n\nUser question: " + user_input
+    
+    # Get chat history for context
     chat_history = []
     for msg in st.session_state.messages[:-1]:  # Exclude current user input
         if msg["role"] == "user":
             chat_history.append(HumanMessage(content=msg["content"]))
         elif msg["role"] == "assistant":
             chat_history.append(AIMessage(content=msg["content"]))
-
-
-    full_prompt = SYSTEM_PROMPT + "\n\nUser question: " + user_input
-
-
-    response = rag_chain.invoke({
-        "input": full_prompt,
-        "chat_history": chat_history
-    })["answer"]
-
-
+    
+    # Contextualize question using chat history
+    context_prompt = ChatPromptTemplate.from_messages([
+        ("system", "Given a chat history and the latest user question, rephrase the latest user question to be a standalone question that incorporates relevant context from history."),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", full_prompt),
+    ])
+    
+    contextualized_question = context_prompt | llm | StrOutputParser()
+    standalone_question = contextualized_question.invoke({"chat_history": chat_history})
+    
+    # Retrieve relevant documents
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
+    relevant_docs = retriever.invoke(standalone_question)
+    
+    # Format context
+    context = "\n\n".join([doc.page_content for doc in relevant_docs])
+    
+    # Generate final response
+    qa_prompt = ChatPromptTemplate.from_messages([
+        ("system", SYSTEM_PROMPT + f"\n\nRelevant context:\n{context}\n\nAnswer the question based only on the context above. If you don't know the answer, say so."),
+        ("human", user_input),
+    ])
+    
+    response_chain = qa_prompt | llm | StrOutputParser()
+    response = response_chain.invoke({})
+    
     st.session_state.messages.append({"role":"assistant","content":response})
     st.rerun()
 
@@ -228,31 +203,30 @@ Developed a foundational GenAI architecture that became the base layer for multi
 The system was showcased to the Nordic Region leadership and adopted as the foundation for an internal L&T product, positioning it as an enterprise-scale AI capability within the organization.</div>
 """, unsafe_allow_html=True)
 
+
 # ---------------- CONTACT ----------------
 st.markdown("## 📬 Contact")
+
 
 st.markdown("""
 <div class='card'>
 <b>GitHub:</b> 
 <a href="https://github.com/yeshee-30" target="_blank" style="color:#c084fc; text-decoration:none;">
-https://github.com/yeshee-30
+[https://github.com/yeshee-30](https://github.com/yeshee-30)
 </a>
 <br><br>
+
 
 <b>LinkedIn:</b> 
 <a href="https://www.linkedin.com/in/yeshee-agarwala-abba96280/" target="_blank" style="color:#c084fc; text-decoration:none;">
-https://www.linkedin.com/in/yeshee-agarwala-abba96280/
+[https://www.linkedin.com/in/yeshee-agarwala-abba96280/](https://www.linkedin.com/in/yeshee-agarwala-abba96280/)
 </a>
 <br><br>
 
+
 <b>Email:</b> 
 <a href="mailto:agarwalyeshee364@gmail.com" style="color:#c084fc;">
-agarwalyeshee364@gmail.com
+[agarwalyeshee364@gmail.com](mailto:agarwalyeshee364@gmail.com)
 </a>
 </div>
 """, unsafe_allow_html=True)
-
-
-
-
-
